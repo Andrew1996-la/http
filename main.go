@@ -2,11 +2,11 @@ package main
 
 import (
 	"fmt"
-	"http/simpleWallet"
+	"http/payModule"
 )
 
 func main() {
-	simpleWallet.SimpleWallet()
+	payModule.PayModule()
 
 	fmt.Println("Программа завершена")
 }
