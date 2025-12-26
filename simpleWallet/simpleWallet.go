@@ -6,36 +6,49 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
-	"sync/atomic"
 )
 
 var (
 	mtx   sync.Mutex
-	bank  atomic.Int64
-	money atomic.Int64
+	bank  int
+	money = 1000
 )
 
 func handlePay(w http.ResponseWriter, r *http.Request) {
 	httpBody, err := io.ReadAll(r.Body)
 	if err != nil {
-		fmt.Println("Произошла ошибка при чтении данных", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := fmt.Fprintf(w, "Произошла ошибка при чтении данных")
+		if err != nil {
+			fmt.Println(err)
+		}
 		return
 	}
 
 	paymentAmount, err := strconv.Atoi(string(httpBody))
 	if err != nil {
-		fmt.Fprintf(w, "Ошибка конвертацииn данных\n", err)
+		w.WriteHeader(http.StatusBadRequest)
+		_, err := fmt.Fprintf(w, "Ошибка конвертации данных")
+		if err != nil {
+			fmt.Println(err)
+		}
 		return
 	}
 
 	// пропускаю через мьютекс критическую секцию потому что из-за одновременного запроса
 	// баланс может стать отрицательным, из-за одновременного прохождения условия
 	mtx.Lock()
-	if money.Load()-int64(paymentAmount) >= 0 {
-		newBalance := money.Add(int64(-paymentAmount))
-		fmt.Fprintf(w, "Операция успешна. Остаток - %d\n", newBalance)
+	if money-paymentAmount >= 0 {
+		money -= paymentAmount
+		_, err := fmt.Fprintf(w, "Операция успешна. Остаток - %d\n", money)
+		if err != nil {
+			fmt.Println(err)
+		}
 	} else {
-		fmt.Fprintf(w, "Недостаточно средств\n")
+		_, err := fmt.Fprintf(w, "Недостаточно средств\n")
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 	mtx.Unlock()
 }
@@ -43,41 +56,59 @@ func handlePay(w http.ResponseWriter, r *http.Request) {
 func handleSave(w http.ResponseWriter, r *http.Request) {
 	httpBody, err := io.ReadAll(r.Body)
 	if err != nil {
-		fmt.Println("Произошла ошибка при чтении данных", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		_, err := fmt.Fprintf(w, "Произошла ошибка при чтении данных")
+		if err != nil {
+			fmt.Println(err)
+		}
 		return
 	}
 
 	paymentSave, err := strconv.Atoi(string(httpBody))
 
 	if err != nil {
-		fmt.Fprintf(w, "Ошибка конвертацииn данных\n", err)
+		w.WriteHeader(http.StatusBadRequest)
+		_, err := fmt.Fprintf(w, "Ошибка конвертации данных\n")
+		if err != nil {
+			fmt.Println(err)
+		}
 		return
 	}
 
 	// пропускаю через мьютекс критическую секцию потому что из-за одновременного запроса
 	// баланс может стать отрицательным, из-за одновременного прохождения условия
 	mtx.Lock()
-	if int64(paymentSave) <= money.Load() {
-		bank.Add(int64(paymentSave))
-		money.Add(int64(-paymentSave))
+	if paymentSave <= money {
+		bank += paymentSave
+		money -= paymentSave
 
-		fmt.Fprintf(w, "На баковский счет поступило - %d\n", paymentSave)
-		fmt.Fprintf(w, "Баланс банка - %d\n", bank.Load())
-
-		fmt.Fprintf(w, "Наличных осталось - %d\n", money.Load())
+		_, err := fmt.Fprintf(
+			w,
+			"На баковский счет поступило - %d\nБаланс банка - %d\nНаличных осталось - %d\n",
+			paymentSave,
+			bank,
+			money,
+		)
+		if err != nil {
+			fmt.Println(err)
+		}
 	} else {
-		fmt.Fprintf(w, "Недостаточно средств\n")
+		_, err := fmt.Fprintf(w, "Недостаточно средств\n")
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 	mtx.Unlock()
 }
 
 func SimpleWallet() {
-	money.Add(50)
-
 	http.HandleFunc("/pay", handlePay)
 	http.HandleFunc("/save", handleSave)
 
 	fmt.Println("Сервер запускается")
 
-	http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe(":8080", nil)
+	if err != nil {
+		fmt.Println(err)
+	}
 }
