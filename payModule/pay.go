@@ -14,7 +14,10 @@ func (p *PaymentModule) handlePay(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := json.NewDecoder(req.Body).Decode(&purchase); err != nil {
+	decoder := json.NewDecoder(req.Body)
+	decoder.DisallowUnknownFields()
+
+	if err := decoder.Decode(&purchase); err != nil {
 		http.Error(w, "Не валидный JSON", http.StatusBadRequest)
 		return
 	}
