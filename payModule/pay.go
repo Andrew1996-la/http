@@ -30,17 +30,21 @@ func (p *PaymentModule) handlePay(w http.ResponseWriter, req *http.Request) {
 
 	p.Money = p.Money - purchase.Amount
 	p.History = append(p.History, purchase)
-	_, err := fmt.Fprintf(
-		w,
-		"совершена покупа %s на сумму: %.2f\nТекущий баланс: %.2f",
-		purchase.Object,
-		purchase.Amount,
-		p.Money,
-	)
-	p.mtx.Unlock()
+	w.Header().Set("Content-Type", "application/json")
 
-	if err != nil {
-		fmt.Println(err)
+	resp := ResponsePay{
+		Message: fmt.Sprintf(
+			"совершена покупа %s на сумму: %.2f",
+			purchase.Object,
+			purchase.Amount,
+		),
+		Balance: p.Money,
+	}
+
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	p.mtx.Unlock()
 }

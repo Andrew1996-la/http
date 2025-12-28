@@ -11,7 +11,12 @@ type Purchase struct {
 	Amount float64 `json:"amount"`
 }
 
-type PurchaseResponse struct {
+type ResponsePay struct {
+	Message string  `json:"message"`
+	Balance float64 `json:"balance"`
+}
+
+type ResponseHistory struct {
 	History []Purchase `json:"history"`
 }
 

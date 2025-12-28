@@ -13,7 +13,7 @@ func (p *PaymentModule) getHandleHistory(w http.ResponseWriter, req *http.Reques
 
 	w.Header().Set("Content-Type", "application/json")
 
-	res := PurchaseResponse{
+	res := ResponseHistory{
 		History: p.History,
 	}
 
