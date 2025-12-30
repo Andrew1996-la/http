@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"http/payModule"
+	"http/queryParams"
 )
 
 func main() {
-	payModule.PayModule()
+	//payModule.PayModule()
+	queryParams.ReqWithQuery()
 
 	fmt.Println("Программа завершена")
 }
